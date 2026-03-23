@@ -16,6 +16,9 @@ class ApiConstants {
   static const jolpicaBaseUrl = 'https://api.jolpi.ca/ergast/f1';
   static const jolpicaCurrentDriverStandings = '/current/driverStandings.json';
   static const jolpicaCurrentConstructorStandings = '/current/constructorStandings.json';
+  // /{season}/{round}/results.json
+  static String jolpicaRaceResults(String season, int round) =>
+      '/$season/$round/results.json';
 
   // HTTP settings
   static const connectTimeout = Duration(seconds: 15);

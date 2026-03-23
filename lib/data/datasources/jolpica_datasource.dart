@@ -4,6 +4,7 @@ import '../../core/constants/api_constants.dart';
 import '../models/constructor_standing_model.dart';
 import '../models/driver_standing_model.dart';
 import '../models/race_model.dart';
+import '../models/race_result_model.dart';
 
 class JolpicaDatasource {
   const JolpicaDatasource(this._dio);
@@ -46,6 +47,20 @@ class JolpicaDatasource {
         .entries
         .map((e) => DriverStandingModel.fromJson(
             e.value as Map<String, dynamic>, e.key + 1))
+        .toList();
+  }
+
+  Future<List<RaceResultModel>> fetchRaceResults(
+      String season, int round) async {
+    final resp =
+        await _dio.get(ApiConstants.jolpicaRaceResults(season, round));
+    final table =
+        resp.data['MRData']['RaceTable'] as Map<String, dynamic>;
+    final races = table['Races'] as List;
+    if (races.isEmpty) return [];
+    final results = races.first['Results'] as List;
+    return results
+        .map((e) => RaceResultModel.fromJson(e as Map<String, dynamic>))
         .toList();
   }
 

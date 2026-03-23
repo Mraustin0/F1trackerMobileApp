@@ -1,18 +1,23 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/constants/team_colors.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/theme/team_theme_extension.dart';
-import '../../data/models/race_model.dart';
 import '../../data/models/lap_record_model.dart';
+import '../../data/models/race_model.dart';
+import '../../data/models/race_result_model.dart';
 import '../../providers/race_provider.dart';
+import '../../shared/widgets/circuit_painter.dart';
 import '../../shared/widgets/glass_card.dart';
 import '../../shared/widgets/pulse_dot.dart';
 import '../../shared/widgets/section_header.dart';
 import '../../shared/widgets/staggered_list.dart';
 
+// ---- Circuit metadata ----
 const kCircuitData = {
   'suzuka': {'laps': 53, 'length': '5.807 km'},
   'marina_bay': {'laps': 62, 'length': '5.063 km'},
@@ -31,10 +36,49 @@ const kCircuitData = {
   'baku': {'laps': 51, 'length': '6.003 km'},
   'jeddah': {'laps': 50, 'length': '6.174 km'},
   'miami': {'laps': 57, 'length': '5.412 km'},
-  'las_vegas': {'laps': 50, 'length': '6.120 km'},
+  'vegas': {'laps': 50, 'length': '6.120 km'},
   'losail': {'laps': 57, 'length': '5.380 km'},
   'catalunya': {'laps': 66, 'length': '4.657 km'},
+  'villeneuve': {'laps': 70, 'length': '4.361 km'},
+  'shanghai': {'laps': 56, 'length': '5.451 km'},
+  'imola': {'laps': 63, 'length': '4.909 km'},
+  'rodriguez': {'laps': 71, 'length': '4.304 km'},
 };
+
+// Map circuitId -> F1 race card photo slug
+const _kCircuitPhotoSlugs = {
+  'albert_park': 'australia',
+  'shanghai': 'china',
+  'suzuka': 'japan',
+  'bahrain': 'bahrain',
+  'jeddah': 'saudi-arabia',
+  'miami': 'miami',
+  'imola': 'emilia-romagna',
+  'monaco': 'monaco',
+  'catalunya': 'spain',
+  'villeneuve': 'canada',
+  'red_bull_ring': 'austria',
+  'silverstone': 'great-britain',
+  'spa': 'belgium',
+  'hungaroring': 'hungary',
+  'zandvoort': 'netherlands',
+  'monza': 'italy',
+  'baku': 'azerbaijan',
+  'marina_bay': 'singapore',
+  'americas': 'united-states',
+  'rodriguez': 'mexico',
+  'interlagos': 'brazil',
+  'vegas': 'las-vegas',
+  'losail': 'qatar',
+  'yas_marina': 'abu-dhabi',
+};
+
+String _circuitPhotoUrl(String circuitId) {
+  final slug = _kCircuitPhotoSlugs[circuitId] ?? circuitId;
+  return 'https://media.formula1.com/image/upload/'
+      'c_lfill,w_1320/q_auto/v1740000001/'
+      'fom-website/static-assets/2026/races/card/$slug.webp';
+}
 
 class RaceDetailScreen extends ConsumerWidget {
   const RaceDetailScreen({
@@ -51,13 +95,11 @@ class RaceDetailScreen extends ConsumerWidget {
     final season = ref.watch(currentSeasonProvider);
     final scheduleAsync = ref.watch(scheduleProvider(season));
 
-    // Resolve race from extra or from schedule
     RaceModel? resolvedRace = race;
     if (resolvedRace == null) {
       scheduleAsync.whenData((races) {
         try {
-          resolvedRace =
-              races.firstWhere((r) => r.circuitId == circuitId);
+          resolvedRace = races.firstWhere((r) => r.circuitId == circuitId);
         } catch (_) {}
       });
     }
@@ -65,19 +107,18 @@ class RaceDetailScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: resolvedRace == null
-          ? _buildLoading()
+          ? const Center(
+              child:
+                  CircularProgressIndicator(color: AppColors.primaryContainer))
           : _RaceDetailBody(race: resolvedRace!, circuitId: circuitId),
-    );
-  }
-
-  Widget _buildLoading() {
-    return const Center(
-      child: CircularProgressIndicator(color: AppColors.primaryContainer),
     );
   }
 }
 
-class _RaceDetailBody extends StatelessWidget {
+// =========================================================
+// Body — now a ConsumerWidget so it can watch raceResults
+// =========================================================
+class _RaceDetailBody extends ConsumerWidget {
   const _RaceDetailBody({required this.race, required this.circuitId});
 
   final RaceModel race;
@@ -88,10 +129,7 @@ class _RaceDetailBody extends StatelessWidget {
 
     if (race.practice1Date != null) {
       entries.add(_SessionEntry(
-        name: 'Practice 1',
-        date: race.practice1Date!,
-        durationMins: 60,
-      ));
+          name: 'Practice 1', date: race.practice1Date!, durationMins: 60));
     }
     if (race.practice2Date != null) {
       entries.add(_SessionEntry(
@@ -102,17 +140,11 @@ class _RaceDetailBody extends StatelessWidget {
     }
     if (race.practice3Date != null) {
       entries.add(_SessionEntry(
-        name: 'Practice 3',
-        date: race.practice3Date!,
-        durationMins: 60,
-      ));
+          name: 'Practice 3', date: race.practice3Date!, durationMins: 60));
     }
     if (race.sprintDate != null) {
       entries.add(_SessionEntry(
-        name: 'Sprint Race',
-        date: race.sprintDate!,
-        durationMins: 60,
-      ));
+          name: 'Sprint Race', date: race.sprintDate!, durationMins: 60));
     }
     if (race.qualifyingDate != null) {
       entries.add(_SessionEntry(
@@ -136,20 +168,27 @@ class _RaceDetailBody extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final teamTheme =
         Theme.of(context).extension<TeamTheme>() ?? TeamTheme.defaultTheme;
     final circuitInfo = kCircuitData[circuitId.toLowerCase()];
     final lapRecord = kLapRecords[circuitId.toLowerCase()];
     final sessions = _buildSessions();
 
+    // Fetch race results if completed
+    AsyncValue<List<RaceResultModel>>? resultsAsync;
+    if (race.isCompleted) {
+      resultsAsync = ref.watch(
+          raceResultsProvider('${race.season}:${race.round}'));
+    }
+
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
-        // Sliver app bar with hero circuit name
+        // ---- Header with real circuit photograph ----
         SliverAppBar(
           pinned: true,
-          expandedHeight: 180,
+          expandedHeight: 260,
           backgroundColor: AppColors.background,
           surfaceTintColor: Colors.transparent,
           leading: IconButton(
@@ -163,22 +202,22 @@ class _RaceDetailBody extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.end,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Badge
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: teamTheme.accentColor.withOpacity(0.15),
+                    color: teamTheme.accentColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(4),
                     border: Border.all(
-                      color: teamTheme.accentColor.withOpacity(0.3),
-                      width: 1,
+                      color: teamTheme.accentColor.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Text(
-                    race.isNextRace
-                        ? 'NEXT RACE'
-                        : 'ROUND ${race.round}',
+                    race.isCompleted
+                        ? 'COMPLETED'
+                        : race.isNextRace
+                            ? 'NEXT RACE'
+                            : 'ROUND ${race.round}',
                     style: AppTextStyles.labelSmall.copyWith(
                       color: teamTheme.accentColor,
                       fontSize: 8,
@@ -186,34 +225,58 @@ class _RaceDetailBody extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-
-                // Race name with Hero
                 Hero(
                   tag: 'race-name-$circuitId',
                   child: Material(
                     color: Colors.transparent,
                     child: Text(
                       race.raceName.toUpperCase(),
-                      style: AppTextStyles.headlineLarge.copyWith(
-                        fontSize: 22,
-                        height: 1.1,
-                      ),
+                      style: AppTextStyles.headlineLarge
+                          .copyWith(fontSize: 22, height: 1.1),
                     ),
                   ),
                 ),
               ],
             ),
-            background: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    teamTheme.accentColor.withOpacity(0.08),
-                    AppColors.background,
-                  ],
+            // Real circuit photograph as background
+            background: Stack(
+              fit: StackFit.expand,
+              children: [
+                CachedNetworkImage(
+                  imageUrl: _circuitPhotoUrl(circuitId),
+                  fit: BoxFit.cover,
+                  placeholder: (_, _) => Container(
+                    color: AppColors.surfaceLow,
+                    child: const Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.primaryContainer,
+                        strokeWidth: 2,
+                      ),
+                    ),
+                  ),
+                  errorWidget: (_, _, _) => Container(
+                    color: AppColors.surfaceLow,
+                    child: const Icon(Icons.landscape_rounded,
+                        color: AppColors.tertiaryContainer, size: 48),
+                  ),
                 ),
-              ),
+                // Dark gradient overlay for text legibility
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      stops: const [0.0, 0.3, 0.7, 1.0],
+                      colors: [
+                        AppColors.background.withValues(alpha: 0.2),
+                        AppColors.background.withValues(alpha: 0.3),
+                        AppColors.background.withValues(alpha: 0.7),
+                        AppColors.background,
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -225,8 +288,44 @@ class _RaceDetailBody extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
               child: Text(
                 '${race.circuitName}  ·  ${race.locality}, ${race.country}',
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.tertiaryContainer,
+                style: AppTextStyles.bodySmall
+                    .copyWith(color: AppColors.tertiaryContainer),
+              ),
+            ),
+
+            // ============ RACE RESULTS (for completed races) ============
+            if (race.isCompleted && resultsAsync != null)
+              resultsAsync.when(
+                loading: () => const Padding(
+                  padding: EdgeInsets.fromLTRB(20, 24, 20, 0),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                        color: AppColors.primaryContainer, strokeWidth: 2),
+                  ),
+                ),
+                error: (_, __) => const SizedBox.shrink(),
+                data: (results) {
+                  if (results.isEmpty) return const SizedBox.shrink();
+                  return _RaceResultsSection(
+                    results: results,
+                    accentColor: teamTheme.accentColor,
+                  );
+                },
+              ),
+
+            // Circuit map
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              child: GlassCard(
+                borderRadius: 16,
+                padding: const EdgeInsets.all(16),
+                child: AnimatedCircuitMap(
+                  circuitId: circuitId,
+                  accentColor: teamTheme.accentColor,
+                  height: 180,
+                  animationDuration: const Duration(milliseconds: 2500),
+                  strokeWidth: 3,
+                  showLabel: true,
                 ),
               ),
             ),
@@ -275,8 +374,8 @@ class _RaceDetailBody extends StatelessWidget {
               ),
             ],
 
-            // Lap Record Detail
-            if (lapRecord != null) ...[
+            // Lap Record
+            if (lapRecord != null)
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                 child: GlassCard(
@@ -296,19 +395,13 @@ class _RaceDetailBody extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'FASTEST LAP RECORD',
-                              style: AppTextStyles.labelSmall.copyWith(
-                                color: const Color(0xFF9B59B6),
-                                fontSize: 8,
-                              ),
-                            ),
-                            Text(
-                              lapRecord.lapTime,
-                              style: AppTextStyles.headlineMedium.copyWith(
-                                color: const Color(0xFFD7B4F3),
-                              ),
-                            ),
+                            Text('FASTEST LAP RECORD',
+                                style: AppTextStyles.labelSmall.copyWith(
+                                    color: const Color(0xFF9B59B6),
+                                    fontSize: 8)),
+                            Text(lapRecord.lapTime,
+                                style: AppTextStyles.headlineMedium.copyWith(
+                                    color: const Color(0xFFD7B4F3))),
                           ],
                         ),
                       ),
@@ -317,19 +410,15 @@ class _RaceDetailBody extends StatelessWidget {
                         children: [
                           Text(lapRecord.driverName,
                               style: AppTextStyles.bodyMedium),
-                          Text(
-                            lapRecord.team,
-                            style: AppTextStyles.bodySmall,
-                          ),
+                          Text(lapRecord.team, style: AppTextStyles.bodySmall),
                         ],
                       ),
                     ],
                   ),
                 ),
               ),
-            ],
 
-            // Session Schedule
+            // Weekend Schedule
             const SectionHeader(
               label: 'Weekend Schedule',
               padding: EdgeInsets.fromLTRB(20, 24, 20, 12),
@@ -349,7 +438,7 @@ class _RaceDetailBody extends StatelessWidget {
               ),
             ),
 
-            // Live tracking card if next race
+            // Live tracking
             if (race.isNextRace)
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
@@ -363,6 +452,339 @@ class _RaceDetailBody extends StatelessWidget {
     );
   }
 }
+
+// =========================================================
+// Race Results Section — Podium P1/P2/P3 + remaining results
+// =========================================================
+class _RaceResultsSection extends StatelessWidget {
+  const _RaceResultsSection({
+    required this.results,
+    required this.accentColor,
+  });
+
+  final List<RaceResultModel> results;
+  final Color accentColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final podium = results.take(3).toList();
+    final rest = results.length > 3 ? results.sublist(3, results.length.clamp(0, 10)) : <RaceResultModel>[];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(
+          label: 'Race Results',
+          padding: EdgeInsets.fromLTRB(20, 24, 20, 12),
+        ),
+
+        // Podium cards
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            children: [
+              // P1 — full width winner card
+              if (podium.isNotEmpty) _WinnerCard(result: podium[0]),
+              const SizedBox(height: 8),
+
+              // P2 + P3 side by side
+              if (podium.length >= 2)
+                Row(
+                  children: [
+                    Expanded(child: _PodiumCard(result: podium[1])),
+                    const SizedBox(width: 8),
+                    if (podium.length >= 3)
+                      Expanded(child: _PodiumCard(result: podium[2])),
+                  ],
+                ),
+            ],
+          ),
+        ),
+
+        // Rest of results (P4-P10)
+        if (rest.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              children: rest
+                  .map((r) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: _ResultRow(result: r),
+                      ))
+                  .toList(),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+// P1 winner card — large, prominent
+class _WinnerCard extends StatelessWidget {
+  const _WinnerCard({required this.result});
+  final RaceResultModel result;
+
+  @override
+  Widget build(BuildContext context) {
+    final teamTheme = TeamColors.forConstructorId(result.constructorId);
+    final teamColor = teamTheme.accentColor;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          border: Border.all(color: teamColor.withValues(alpha: 0.3)),
+        ),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(width: 4, color: teamColor),
+              Expanded(
+                child: Stack(
+                  children: [
+                    // Ghost "1" behind
+                    Positioned(
+                      right: -4,
+                      top: -12,
+                      child: Text(
+                        '1',
+                        style: AppTextStyles.rankXL.copyWith(
+                          fontSize: 90,
+                          color: teamColor.withValues(alpha: 0.08),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Winner badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFD700)
+                                  .withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                  color: const Color(0xFFFFD700)
+                                      .withValues(alpha: 0.4)),
+                            ),
+                            child: Text(
+                              'WINNER',
+                              style: AppTextStyles.labelSmall.copyWith(
+                                color: const Color(0xFFFFD700),
+                                fontSize: 8,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            result.familyName.toUpperCase(),
+                            style: AppTextStyles.headlineLarge
+                                .copyWith(fontSize: 26),
+                          ),
+                          Text(result.givenName,
+                              style: AppTextStyles.bodySmall),
+                          const SizedBox(height: 4),
+                          Text(
+                            result.constructorName,
+                            style: AppTextStyles.bodySmall
+                                .copyWith(color: teamColor),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              if (result.time != null) ...[
+                                Icon(Icons.timer_outlined,
+                                    size: 14, color: AppColors.tertiary),
+                                const SizedBox(width: 4),
+                                Text(
+                                  result.time!,
+                                  style: AppTextStyles.bodyMedium.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                              const Spacer(),
+                              Text(
+                                '${result.points.toStringAsFixed(0)} PTS',
+                                style: AppTextStyles.labelBold.copyWith(
+                                  color: teamColor,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// P2/P3 podium card — compact
+class _PodiumCard extends StatelessWidget {
+  const _PodiumCard({required this.result});
+  final RaceResultModel result;
+
+  @override
+  Widget build(BuildContext context) {
+    final teamTheme = TeamColors.forConstructorId(result.constructorId);
+    final teamColor = teamTheme.accentColor;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          border: Border.all(color: AppColors.glassBorder),
+        ),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(width: 3, color: teamColor),
+              Expanded(
+                child: Stack(
+                  children: [
+                    Positioned(
+                      right: -4,
+                      top: -8,
+                      child: Text(
+                        result.position.toString(),
+                        style: AppTextStyles.rankXL.copyWith(
+                          fontSize: 60,
+                          color: AppColors.surfaceHigh,
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'P${result.position}',
+                            style: AppTextStyles.labelBold
+                                .copyWith(color: teamColor, fontSize: 10),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            result.familyName.toUpperCase(),
+                            style: AppTextStyles.headlineSmall
+                                .copyWith(fontSize: 15),
+                          ),
+                          Text(result.constructorName,
+                              style: AppTextStyles.bodySmall
+                                  .copyWith(fontSize: 11)),
+                          const SizedBox(height: 8),
+                          if (result.time != null)
+                            Text(
+                              result.time!,
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.tertiary,
+                                fontSize: 11,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// P4+ result row — minimal
+class _ResultRow extends StatelessWidget {
+  const _ResultRow({required this.result});
+  final RaceResultModel result;
+
+  @override
+  Widget build(BuildContext context) {
+    final teamTheme = TeamColors.forConstructorId(result.constructorId);
+    final teamColor = teamTheme.accentColor;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          border:
+              Border.fromBorderSide(BorderSide(color: AppColors.glassBorder)),
+        ),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(width: 2, color: teamColor),
+              Expanded(
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 28,
+                        child: Text(
+                          'P${result.position}',
+                          style: AppTextStyles.labelBold.copyWith(
+                            color: AppColors.tertiaryContainer,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          result.fullName,
+                          style: AppTextStyles.bodyMedium
+                              .copyWith(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      if (result.hasFastestLap)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Icon(Icons.bolt_rounded,
+                              size: 14, color: const Color(0xFF9B59B6)),
+                        ),
+                      Text(
+                        result.time ?? (result.isFinished ? '' : result.status),
+                        style: AppTextStyles.bodySmall
+                            .copyWith(color: AppColors.tertiary),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// =========================================================
+// Supporting widgets (unchanged)
+// =========================================================
 
 class _StatCard extends StatelessWidget {
   const _StatCard({
@@ -388,13 +810,9 @@ class _StatCard extends StatelessWidget {
         children: [
           Icon(icon, size: 16, color: accentColor),
           const SizedBox(height: 8),
-          Text(
-            value,
-            style: AppTextStyles.headlineSmall.copyWith(
-              fontSize: 16,
-              color: AppColors.onSurface,
-            ),
-          ),
+          Text(value,
+              style: AppTextStyles.headlineSmall
+                  .copyWith(fontSize: 16, color: AppColors.onSurface)),
           if (sublabel != null)
             Text(sublabel!, style: AppTextStyles.bodySmall),
           const SizedBox(height: 4),
@@ -422,10 +840,7 @@ class _SessionEntry {
 }
 
 class _SessionCard extends StatelessWidget {
-  const _SessionCard({
-    required this.session,
-    required this.accentColor,
-  });
+  const _SessionCard({required this.session, required this.accentColor});
 
   final _SessionEntry session;
   final Color accentColor;
@@ -442,21 +857,19 @@ class _SessionCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: session.isRace
-            ? accentColor.withOpacity(0.08)
+            ? accentColor.withValues(alpha: 0.08)
             : AppColors.surface,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: session.isRace
-              ? accentColor.withOpacity(0.3)
+              ? accentColor.withValues(alpha: 0.3)
               : AppColors.glassBorder,
-          width: 1,
         ),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(
           children: [
-            // Day / Date
             SizedBox(
               width: 48,
               child: Column(
@@ -464,25 +877,18 @@ class _SessionCard extends StatelessWidget {
                 children: [
                   Text(dayStr,
                       style: AppTextStyles.labelSmall.copyWith(fontSize: 9)),
-                  Text(
-                    dateStr,
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                    ),
-                  ),
+                  Text(dateStr,
+                      style: AppTextStyles.bodyMedium
+                          .copyWith(fontWeight: FontWeight.w700, fontSize: 13)),
                 ],
               ),
             ),
-
             Container(
               width: 1,
               height: 36,
               margin: const EdgeInsets.symmetric(horizontal: 12),
               color: AppColors.glassBorder,
             ),
-
-            // Session name + time
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -504,35 +910,24 @@ class _SessionCard extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: accentColor.withOpacity(0.15),
+                            color: accentColor.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: Text(
-                            'UP NEXT',
-                            style: AppTextStyles.labelSmall.copyWith(
-                              color: accentColor,
-                              fontSize: 7,
-                            ),
-                          ),
+                          child: Text('UP NEXT',
+                              style: AppTextStyles.labelSmall.copyWith(
+                                  color: accentColor, fontSize: 7)),
                         ),
                       ],
                     ],
                   ),
                   const SizedBox(height: 2),
-                  Text(
-                    '$timeStr – $endTimeStr',
-                    style: AppTextStyles.bodySmall,
-                  ),
+                  Text('$timeStr – $endTimeStr',
+                      style: AppTextStyles.bodySmall),
                 ],
               ),
             ),
-
-            // Bell icon
-            Icon(
-              Icons.notifications_outlined,
-              color: AppColors.tertiaryContainer,
-              size: 18,
-            ),
+            const Icon(Icons.notifications_outlined,
+                color: AppColors.tertiaryContainer, size: 18),
           ],
         ),
       ),
@@ -542,15 +937,14 @@ class _SessionCard extends StatelessWidget {
 
 class _LiveTrackingCard extends StatelessWidget {
   const _LiveTrackingCard({required this.accentColor});
-
   final Color accentColor;
 
   @override
   Widget build(BuildContext context) {
     return GlassCard(
       blur: true,
-      borderColor: accentColor.withOpacity(0.3),
-      backgroundColor: accentColor.withOpacity(0.06),
+      borderColor: accentColor.withValues(alpha: 0.3),
+      backgroundColor: accentColor.withValues(alpha: 0.06),
       child: Row(
         children: [
           PulseDot(color: accentColor, size: 10),
@@ -559,21 +953,15 @@ class _LiveTrackingCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'LIVE TRACKING ACTIVE',
-                  style: AppTextStyles.headlineSmall.copyWith(
-                    fontSize: 13,
-                    color: accentColor,
-                  ),
-                ),
-                Text(
-                  'Real-time telemetry available via OpenF1',
-                  style: AppTextStyles.bodySmall,
-                ),
+                Text('LIVE TRACKING ACTIVE',
+                    style: AppTextStyles.headlineSmall
+                        .copyWith(fontSize: 13, color: accentColor)),
+                Text('Real-time telemetry available via OpenF1',
+                    style: AppTextStyles.bodySmall),
               ],
             ),
           ),
-          Icon(Icons.chevron_right_rounded,
+          const Icon(Icons.chevron_right_rounded,
               color: AppColors.tertiaryContainer),
         ],
       ),

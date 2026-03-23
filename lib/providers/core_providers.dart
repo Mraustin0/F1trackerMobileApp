@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants/api_constants.dart';
+import '../data/datasources/jolpica_datasource.dart';
 
 // --- Dio: OpenF1 ---
 final openF1DioProvider = Provider<Dio>((ref) {
@@ -24,6 +25,11 @@ final jolpicaDioProvider = Provider<Dio>((ref) {
     sendTimeout: ApiConstants.sendTimeout,
     headers: {'Accept': 'application/json'},
   ));
+});
+
+// --- Jolpica Datasource ---
+final jolpicaDatasourceProvider = Provider<JolpicaDatasource>((ref) {
+  return JolpicaDatasource(ref.watch(jolpicaDioProvider));
 });
 
 // --- Connectivity stream ---

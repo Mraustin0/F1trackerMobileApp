@@ -78,145 +78,161 @@ class _RaceListItemState extends State<RaceListItem>
       position: _slideAnim,
       child: FadeTransition(
         opacity: _fadeAnim,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            decoration: const BoxDecoration(
-              color: AppColors.surface,
-              border: Border.fromBorderSide(
-                  BorderSide(color: AppColors.glassBorder)),
-            ),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Left accent bar
-                  Container(
-                    width: isNext ? 4 : 1,
-                    color: isNext
-                        ? AppColors.primaryContainer
-                        : Colors.transparent,
-                  ),
+        child: GestureDetector(
+          onTap: () => context.push(
+            '/race/${widget.race.circuitId}',
+            extra: widget.race,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                border: const Border.fromBorderSide(
+                    BorderSide(color: AppColors.glassBorder)),
+              ),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Left accent bar
+                    Container(
+                      width: isNext
+                          ? 4
+                          : isCompleted
+                              ? 3
+                              : 1,
+                      color: isNext
+                          ? AppColors.primaryContainer
+                          : isCompleted
+                              ? AppColors.tertiaryContainer
+                              : Colors.transparent,
+                    ),
 
-                  // Card content
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Round number column
-                          SizedBox(
-                            width: 48,
-                            child: Column(
-                              children: [
-                                Text(
-                                  'ROUND',
-                                  style: AppTextStyles.labelSmall
-                                      .copyWith(fontSize: 7),
-                                ),
-                                Text(
-                                  widget.race.round.toString(),
-                                  style: AppTextStyles.rankLarge.copyWith(
-                                    fontSize: 28,
-                                    color: isNext
-                                        ? AppColors.primaryContainer
-                                        : AppColors.tertiaryContainer,
+                    // Card content
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Round number column
+                            SizedBox(
+                              width: 48,
+                              child: Column(
+                                children: [
+                                  Text(
+                                    'ROUND',
+                                    style: AppTextStyles.labelSmall
+                                        .copyWith(fontSize: 7),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-
-                          // Main content
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _StatusBadge(status: status),
-                                const SizedBox(height: 6),
-                                Text(
-                                  widget.race.raceName.toUpperCase(),
-                                  style: AppTextStyles.headlineSmall
-                                      .copyWith(fontSize: 15),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${widget.race.locality}, ${widget.race.country}',
-                                  style: AppTextStyles.bodySmall,
-                                ),
-                                const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.access_time_rounded,
-                                      size: 12,
-                                      color: AppColors.tertiaryContainer,
+                                  Text(
+                                    widget.race.round.toString(),
+                                    style: AppTextStyles.rankLarge.copyWith(
+                                      fontSize: 28,
+                                      color: isNext
+                                          ? AppColors.primaryContainer
+                                          : AppColors.tertiaryContainer,
                                     ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'LIGHTS OUT  ',
-                                      style: AppTextStyles.labelSmall.copyWith(
-                                        fontSize: 8,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+
+                            // Main content
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _StatusBadge(status: status),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    widget.race.raceName.toUpperCase(),
+                                    style: AppTextStyles.headlineSmall
+                                        .copyWith(fontSize: 15),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${widget.race.locality}, ${widget.race.country}',
+                                    style: AppTextStyles.bodySmall,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.access_time_rounded,
+                                        size: 12,
                                         color: AppColors.tertiaryContainer,
                                       ),
-                                    ),
-                                    Text(
-                                      '$dateStr · $timeStr',
-                                      style: AppTextStyles.labelBold.copyWith(
-                                        color: AppColors.onSurface,
-                                        fontSize: 11,
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'LIGHTS OUT  ',
+                                        style:
+                                            AppTextStyles.labelSmall.copyWith(
+                                          fontSize: 8,
+                                          color: AppColors.tertiaryContainer,
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                if (isCompleted)
-                                  TextButton.icon(
-                                    onPressed: () => context.push(
-                                      '/race/${widget.race.circuitId}',
-                                      extra: widget.race,
-                                    ),
-                                    icon: const Icon(
-                                      Icons.bar_chart_rounded,
-                                      size: 14,
-                                      color: AppColors.tertiaryContainer,
-                                    ),
-                                    label: Text(
-                                      'VIEW RESULTS',
-                                      style: AppTextStyles.labelBold.copyWith(
-                                        color: AppColors.tertiaryContainer,
+                                      Text(
+                                        '$dateStr · $timeStr',
+                                        style:
+                                            AppTextStyles.labelBold.copyWith(
+                                          color: AppColors.onSurface,
+                                          fontSize: 11,
+                                        ),
                                       ),
-                                    ),
-                                    style: TextButton.styleFrom(
-                                      padding: EdgeInsets.zero,
-                                      minimumSize: Size.zero,
-                                      tapTargetSize:
-                                          MaterialTapTargetSize.shrinkWrap,
-                                    ),
-                                  )
-                                else
-                                  SkewButton(
-                                    label: 'TRACK DETAILS',
-                                    icon: Icons.map_outlined,
-                                    onTap: () => context.push(
-                                      '/race/${widget.race.circuitId}',
-                                      extra: widget.race,
-                                    ),
-                                    color: isNext
-                                        ? AppColors.primaryContainer
-                                        : AppColors.surfaceHigh,
-                                    textColor: AppColors.onSurface,
+                                    ],
                                   ),
-                              ],
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    children: [
+                                      if (isCompleted)
+                                        Flexible(
+                                          child: SkewButton(
+                                            label: 'VIEW RESULTS',
+                                            icon: Icons.emoji_events_outlined,
+                                            onTap: () => context.push(
+                                              '/race/${widget.race.circuitId}',
+                                              extra: widget.race,
+                                            ),
+                                            color: AppColors.surfaceHigh,
+                                            textColor:
+                                                AppColors.tertiaryContainer,
+                                          ),
+                                        )
+                                      else
+                                        Flexible(
+                                          child: SkewButton(
+                                            label: 'TRACK DETAILS',
+                                            icon: Icons.map_outlined,
+                                            onTap: () => context.push(
+                                              '/race/${widget.race.circuitId}',
+                                              extra: widget.race,
+                                            ),
+                                            color: isNext
+                                                ? AppColors.primaryContainer
+                                                : AppColors.surfaceHigh,
+                                            textColor: AppColors.onSurface,
+                                          ),
+                                        ),
+                                      const Spacer(),
+                                      Icon(
+                                        Icons.chevron_right_rounded,
+                                        color: AppColors.tertiaryContainer,
+                                        size: 20,
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
