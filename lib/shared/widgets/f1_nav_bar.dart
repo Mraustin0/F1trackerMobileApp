@@ -24,7 +24,7 @@ class _F1NavBarState extends State<F1NavBar> {
     _NavItem(icon: Icons.home_rounded, label: 'HOME'),
     _NavItem(icon: Icons.calendar_month_rounded, label: 'CALENDAR'),
     _NavItem(icon: Icons.leaderboard_rounded, label: 'STANDINGS'),
-    _NavItem(icon: Icons.person_rounded, label: 'PROFILE'),
+    _NavItem(icon: Icons.favorite_rounded, label: 'DRIVERS'),
   ];
 
   @override

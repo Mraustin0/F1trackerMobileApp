@@ -9,11 +9,13 @@ class ProfileState {
   final String selectedTeamKey;
   final bool notificationsEnabled;
   final int minutesBefore;
+  final List<String> favoriteDriverIds;
 
   const ProfileState({
     this.selectedTeamKey = '',
     this.notificationsEnabled = true,
     this.minutesBefore = 30,
+    this.favoriteDriverIds = const [],
   });
 
   TeamTheme get teamTheme =>
@@ -23,11 +25,13 @@ class ProfileState {
     String? selectedTeamKey,
     bool? notificationsEnabled,
     int? minutesBefore,
+    List<String>? favoriteDriverIds,
   }) {
     return ProfileState(
       selectedTeamKey: selectedTeamKey ?? this.selectedTeamKey,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
       minutesBefore: minutesBefore ?? this.minutesBefore,
+      favoriteDriverIds: favoriteDriverIds ?? this.favoriteDriverIds,
     );
   }
 }
@@ -44,10 +48,15 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
         box.get(HiveConstants.notifEnabledKey, defaultValue: true) as bool;
     final mins =
         box.get(HiveConstants.notifMinutesKey, defaultValue: 30) as int;
+    final favs =
+        (box.get(HiveConstants.favoriteDriversKey, defaultValue: <String>[])
+                as List)
+            .cast<String>();
     state = ProfileState(
       selectedTeamKey: team,
       notificationsEnabled: notif,
       minutesBefore: mins,
+      favoriteDriverIds: favs,
     );
   }
 
@@ -67,6 +76,24 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     final box = Hive.box(HiveConstants.prefsBox);
     await box.put(HiveConstants.notifMinutesKey, minutes);
     state = state.copyWith(minutesBefore: minutes);
+  }
+
+  Future<void> setFavoriteDrivers(List<String> driverIds) async {
+    final box = Hive.box(HiveConstants.prefsBox);
+    await box.put(HiveConstants.favoriteDriversKey, driverIds);
+    state = state.copyWith(favoriteDriverIds: driverIds);
+  }
+
+  Future<void> toggleFavorite(String driverId) async {
+    final current = List<String>.from(state.favoriteDriverIds);
+    if (current.contains(driverId)) {
+      current.remove(driverId);
+    } else {
+      current.add(driverId);
+    }
+    final box = Hive.box(HiveConstants.prefsBox);
+    await box.put(HiveConstants.favoriteDriversKey, current);
+    state = state.copyWith(favoriteDriverIds: current);
   }
 }
 

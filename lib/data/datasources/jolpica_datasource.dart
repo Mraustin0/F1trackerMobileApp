@@ -64,6 +64,41 @@ class JolpicaDatasource {
         .toList();
   }
 
+  /// Fetches driver info (dob, nationality, etc.) from a specific season.
+  Future<Map<String, dynamic>> fetchDriverInfo(
+      String season, String driverId) async {
+    final resp =
+        await _dio.get(ApiConstants.jolpicaDriverInfo(season, driverId));
+    final table =
+        resp.data['MRData']['DriverTable'] as Map<String, dynamic>;
+    final drivers = table['Drivers'] as List;
+    return drivers.isNotEmpty
+        ? drivers.first as Map<String, dynamic>
+        : <String, dynamic>{};
+  }
+
+  /// Fetches a driver's standing for a specific season.
+  /// Returns null if the driver didn't compete that season.
+  Future<Map<String, dynamic>?> fetchDriverSeasonStanding(
+      String season, String driverId) async {
+    try {
+      final resp = await _dio
+          .get(ApiConstants.jolpicaDriverSeasonStanding(season, driverId));
+      final table =
+          resp.data['MRData']['StandingsTable'] as Map<String, dynamic>;
+      final lists = table['StandingsLists'] as List;
+      if (lists.isEmpty) return null;
+      final standings =
+          (lists.first as Map<String, dynamic>)['DriverStandings'] as List;
+      if (standings.isEmpty) return null;
+      final standing = standings.first as Map<String, dynamic>;
+      standing['season'] = table['season'] ?? season;
+      return standing;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<List<ConstructorStandingModel>> fetchConstructorStandings(
       String season) async {
     final resp = await _dio.get(

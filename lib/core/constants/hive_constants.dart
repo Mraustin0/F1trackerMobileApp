@@ -18,4 +18,5 @@ class HiveConstants {
   static const teamKey = 'selected_team';
   static const notifEnabledKey = 'notif_enabled';
   static const notifMinutesKey = 'notif_minutes_before';
+  static const favoriteDriversKey = 'favorite_drivers';
 }

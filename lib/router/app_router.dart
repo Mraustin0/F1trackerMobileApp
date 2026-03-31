@@ -7,6 +7,7 @@ import '../features/calendar/calendar_screen.dart';
 import '../features/race_detail/race_detail_screen.dart';
 import '../features/standings/standings_screen.dart';
 import '../features/profile/profile_screen.dart';
+import '../features/driver_detail/driver_detail_screen.dart';
 import '../shared/widgets/f1_nav_bar.dart';
 import '../data/models/race_model.dart';
 
@@ -59,6 +60,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final circuitId = state.pathParameters['circuitId'] ?? '';
           final race = state.extra as RaceModel?;
           return RaceDetailScreen(circuitId: circuitId, race: race);
+        },
+      ),
+      GoRoute(
+        path: '/driver/:driverId',
+        builder: (context, state) {
+          final driverId = state.pathParameters['driverId'] ?? '';
+          final extra = state.extra as Map<String, dynamic>? ?? {};
+          return DriverDetailScreen(
+            driverId: driverId,
+            driverNumber: extra['driverNumber'] as int? ?? 0,
+            driverName: extra['driverName'] as String? ?? '',
+            constructorId: extra['constructorId'] as String? ?? '',
+          );
         },
       ),
     ],

@@ -19,6 +19,13 @@ class ApiConstants {
   // /{season}/{round}/results.json
   static String jolpicaRaceResults(String season, int round) =>
       '/$season/$round/results.json';
+  // /{season}/drivers/{driverId}/driverStandings.json
+  static String jolpicaDriverSeasonStanding(String season, String driverId) =>
+      '/$season/drivers/$driverId/driverStandings.json';
+
+  // /{season}/drivers/{driverId}.json — driver info (dob, nationality)
+  static String jolpicaDriverInfo(String season, String driverId) =>
+      '/$season/drivers/$driverId.json';
 
   // HTTP settings
   static const connectTimeout = Duration(seconds: 15);

@@ -37,6 +37,34 @@ class OpenF1Datasource {
         .toList();
   }
 
+  Future<List<CachedDriverModel>> fetchDriversByNumber(int driverNumber) async {
+    final resp = await _dio.get(
+      ApiConstants.openf1Drivers,
+      queryParameters: {'driver_number': driverNumber},
+    );
+    final list = resp.data as List;
+    return list
+        .map((e) =>
+            CachedDriverModel.fromOpenF1Json(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<List<CachedDriverModel>> fetchDriverByAcronym(
+      String nameAcronym) async {
+    final resp = await _dio.get(
+      ApiConstants.openf1Drivers,
+      queryParameters: {
+        'name_acronym': nameAcronym,
+        'session_key': 'latest',
+      },
+    );
+    final list = resp.data as List;
+    return list
+        .map((e) =>
+            CachedDriverModel.fromOpenF1Json(e as Map<String, dynamic>))
+        .toList();
+  }
+
   // Live lap interval (race only)
   Future<List<Map<String, dynamic>>> fetchIntervals(int sessionKey) async {
     final resp = await _dio.get(
