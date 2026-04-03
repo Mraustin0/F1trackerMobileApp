@@ -47,6 +47,12 @@ dependencies:
   # Offline detection
   connectivity_plus: ^6.1.0
 
+  # Home screen widget bridge
+  home_widget: ^0.7.0
+
+  # Native calendar integration
+  device_calendar: ^4.3.0
+
   # Date/number formatting
   intl: ^0.19.0
 

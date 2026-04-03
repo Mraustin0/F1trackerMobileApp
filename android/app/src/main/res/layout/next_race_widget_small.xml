@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_background"
+    android:padding="12dp"
+    android:gravity="start">
+
+    <!-- Red top accent bar -->
+    <View
+        android:layout_width="32dp"
+        android:layout_height="3dp"
+        android:background="#DC2626"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Flag + Circuit -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/wg_country_flag"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="16sp"
+            android:text="🏎"
+            android:layout_marginEnd="4dp" />
+
+        <TextView
+            android:id="@+id/wg_circuit_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textSize="9sp"
+            android:textColor="#C6C6C7"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:text="Circuit" />
+    </LinearLayout>
+
+    <!-- Race name -->
+    <TextView
+        android:id="@+id/wg_race_name"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:textSize="13sp"
+        android:textStyle="bold|italic"
+        android:textColor="#E4E1EE"
+        android:maxLines="2"
+        android:ellipsize="end"
+        android:gravity="center_vertical"
+        android:text="Race Name" />
+
+    <!-- Countdown -->
+    <TextView
+        android:id="@+id/wg_countdown"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="20sp"
+        android:textStyle="bold|italic"
+        android:textColor="#DC2626"
+        android:text="—" />
+
+    <!-- Qualifying -->
+    <TextView
+        android:id="@+id/wg_qualifying"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="8sp"
+        android:textColor="#C6C6C7"
+        android:text="QUAL: —" />
+
+</LinearLayout>

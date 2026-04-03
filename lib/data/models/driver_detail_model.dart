@@ -68,6 +68,7 @@ class DriverDetailModel {
     final dob = dobStr != null ? DateTime.tryParse(dobStr) : null;
 
     final seasons = <SeasonStanding>[];
+    final currentYear = DateTime.now().year.toString();
 
     for (final ds in seasonStandings) {
       final season = ds['season']?.toString() ?? '';
@@ -83,6 +84,7 @@ class DriverDetailModel {
         wins: int.tryParse(ds['wins']?.toString() ?? '0') ?? 0,
         constructorId: constructor['constructorId'] as String? ?? '',
         constructorName: constructor['name'] as String? ?? '',
+        isOngoing: season == currentYear,
       ));
     }
 
@@ -110,6 +112,7 @@ class SeasonStanding {
   final int wins;
   final String constructorId;
   final String constructorName;
+  final bool isOngoing;
 
   const SeasonStanding({
     required this.season,
@@ -118,5 +121,6 @@ class SeasonStanding {
     required this.wins,
     required this.constructorId,
     required this.constructorName,
+    this.isOngoing = false,
   });
 }

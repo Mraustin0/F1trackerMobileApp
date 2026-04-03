@@ -65,7 +65,7 @@ class _DriverDetailBody extends ConsumerWidget {
         // Header with driver photo
         SliverAppBar(
           pinned: true,
-          expandedHeight: 280,
+          expandedHeight: 360,
           backgroundColor: AppColors.background,
           surfaceTintColor: Colors.transparent,
           elevation: 0,
@@ -153,7 +153,11 @@ class _DriverHeroBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final headshotUrl = detailAsync.valueOrNull?.headshotUrl;
+    final rawUrl = detailAsync.valueOrNull?.headshotUrl;
+    final headshotUrl = rawUrl
+        ?.replaceAll('.transform/1col/', '.transform/6col/')
+        .replaceAll('.transform/2col/', '.transform/6col/')
+        .replaceAll('.transform/4col/', '.transform/6col/');
 
     return Container(
       decoration: BoxDecoration(
@@ -190,9 +194,10 @@ class _DriverHeroBanner extends StatelessWidget {
               bottom: 0,
               child: CachedNetworkImage(
                 imageUrl: headshotUrl,
-                height: 240,
+                height: 320,
                 fit: BoxFit.contain,
-                errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                filterQuality: FilterQuality.high,
+                errorWidget: (_, _, _) => const SizedBox.shrink(),
               ),
             ),
           // Bottom gradient for text legibility

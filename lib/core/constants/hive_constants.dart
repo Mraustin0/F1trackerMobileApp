@@ -19,4 +19,13 @@ class HiveConstants {
   static const notifEnabledKey = 'notif_enabled';
   static const notifMinutesKey = 'notif_minutes_before';
   static const favoriteDriversKey = 'favorite_drivers';
+
+  // Cache timestamp keys
+  static const driverStandingsCacheTimeKey = 'driver_standings_cache_time';
+  static const constructorStandingsCacheTimeKey = 'constructor_standings_cache_time';
+  static const raceCacheTimePrefix = 'race_cache_time_';
+
+  // Driver season standings cache keys
+  static const driverSeasonCachePrefix = 'driver_season_';
+  static const driverSeasonCacheTimePrefix = 'driver_season_time_';
 }

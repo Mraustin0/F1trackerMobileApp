@@ -38,6 +38,15 @@ class _StandingsScreenState extends ConsumerState<StandingsScreen>
     super.dispose();
   }
 
+  Future<void> _refresh() async {
+    ref.invalidate(driverStandingsProvider);
+    ref.invalidate(constructorStandingsProvider);
+    await Future.wait([
+      ref.read(driverStandingsProvider.future),
+      ref.read(constructorStandingsProvider.future),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     final teamTheme =
@@ -49,8 +58,13 @@ class _StandingsScreenState extends ConsumerState<StandingsScreen>
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        color: accentColor,
+        backgroundColor: AppColors.surface,
+        child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics()),
         slivers: [
           // AppBar
           SliverAppBar(
@@ -121,6 +135,7 @@ class _StandingsScreenState extends ConsumerState<StandingsScreen>
             ),
           ),
         ],
+        ),
       ),
     );
   }

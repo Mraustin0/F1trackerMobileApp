@@ -5,6 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/theme/team_theme_extension.dart';
 import '../../providers/race_provider.dart';
+import '../../providers/standings_provider.dart';
 
 import '../../shared/widgets/section_header.dart';
 import '../../shared/widgets/shimmer_card.dart';
@@ -13,11 +14,28 @@ import 'widgets/next_race_hero.dart';
 import 'widgets/circuit_map_card.dart';
 import 'widgets/championship_standings_preview.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  Future<void> _refresh() async {
+    final season = ref.read(currentSeasonProvider);
+    ref.invalidate(scheduleProvider(season));
+    ref.invalidate(driverStandingsProvider);
+    ref.invalidate(constructorStandingsProvider);
+    await Future.wait([
+      ref.read(scheduleProvider(season).future),
+      ref.read(driverStandingsProvider.future),
+      ref.read(constructorStandingsProvider.future),
+    ]);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final season = ref.watch(currentSeasonProvider);
     final nextRace = ref.watch(nextRaceProvider);
     final scheduleAsync = ref.watch(scheduleProvider(season));
@@ -26,8 +44,13 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        color: teamTheme.accentColor,
+        backgroundColor: AppColors.surface,
+        child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics()),
         slivers: [
           // App Bar
           SliverAppBar(
@@ -161,6 +184,7 @@ class HomeScreen extends ConsumerWidget {
             ]),
           ),
         ],
+        ),
       ),
     );
   }
