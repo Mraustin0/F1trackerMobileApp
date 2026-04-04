@@ -127,7 +127,7 @@ class _DriverDetailBody extends ConsumerWidget {
               _ChampionshipHistory(
                   standings: detail.seasonStandings, accent: accent),
 
-              const SizedBox(height: 100),
+              const SizedBox(height: 140),
             ]),
           ),
         ),
@@ -493,6 +493,7 @@ class _ChampionshipHistory extends StatelessWidget {
       child: Column(
         children: standings.map((s) {
           final isChampion = s.position == 1;
+          final isOngoing = s.isOngoing;
           final teamTheme = TeamColors.forConstructorId(s.constructorId);
 
           return Padding(
@@ -512,13 +513,17 @@ class _ChampionshipHistory extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 10),
                         decoration: BoxDecoration(
-                          color: isChampion
-                              ? const Color(0xFFFFD700).withOpacity(0.06)
-                              : AppColors.surface,
+                          color: isOngoing
+                              ? AppColors.primaryContainer.withOpacity(0.08)
+                              : isChampion
+                                  ? const Color(0xFFFFD700).withOpacity(0.06)
+                                  : AppColors.surface,
                           border: Border.all(
-                            color: isChampion
-                                ? const Color(0xFFFFD700).withOpacity(0.2)
-                                : AppColors.glassBorder,
+                            color: isOngoing
+                                ? AppColors.primaryContainer.withOpacity(0.3)
+                                : isChampion
+                                    ? const Color(0xFFFFD700).withOpacity(0.2)
+                                    : AppColors.glassBorder,
                             width: 1,
                           ),
                           borderRadius: const BorderRadius.only(
@@ -566,6 +571,32 @@ class _ChampionshipHistory extends StatelessWidget {
                                   style: TextStyle(
                                       fontSize: 12,
                                       color: Color(0xFFFFD700))),
+                            ],
+                            if (isOngoing) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryContainer
+                                      .withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: AppColors.primaryContainer
+                                        .withOpacity(0.5),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Text(
+                                  'ONGOING',
+                                  style: AppTextStyles.labelSmall.copyWith(
+                                    fontSize: 8,
+                                    color: AppColors.primaryContainer,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
                             ],
                             const SizedBox(width: 10),
                             // Constructor
