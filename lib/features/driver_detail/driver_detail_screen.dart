@@ -579,11 +579,11 @@ class _ChampionshipHistory extends StatelessWidget {
                                     horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: AppColors.primaryContainer
-                                      .withOpacity(0.15),
+                                      .withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(4),
                                   border: Border.all(
                                     color: AppColors.primaryContainer
-                                        .withOpacity(0.5),
+                                        .withValues(alpha: 0.5),
                                     width: 1,
                                   ),
                                 ),
