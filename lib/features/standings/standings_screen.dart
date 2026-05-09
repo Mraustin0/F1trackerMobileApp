@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/constants/team_colors.dart';
 import '../../core/theme/app_colors.dart';
@@ -10,6 +11,7 @@ import '../../data/models/driver_standing_model.dart';
 import '../../providers/standings_provider.dart';
 
 import '../../shared/widgets/shimmer_card.dart';
+import '../../shared/widgets/staggered_list.dart';
 
 class StandingsScreen extends ConsumerStatefulWidget {
   const StandingsScreen({super.key});
@@ -49,9 +51,23 @@ class _StandingsScreenState extends ConsumerState<StandingsScreen>
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
+      body: RefreshIndicator(
+        color: accentColor,
+        backgroundColor: AppColors.surface,
+        onRefresh: () async {
+          if (_showDrivers) {
+            ref.invalidate(driverStandingsProvider);
+            await ref.read(driverStandingsProvider.future);
+          } else {
+            ref.invalidate(constructorStandingsProvider);
+            await ref.read(constructorStandingsProvider.future);
+          }
+        },
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
+          ),
+          slivers: [
           // AppBar
           SliverAppBar(
             pinned: true,
@@ -100,6 +116,7 @@ class _StandingsScreenState extends ConsumerState<StandingsScreen>
                         ),
                         error: (e, _) => _ErrorWidget(
                           message: 'Failed to load driver standings',
+                          onRetry: () => ref.invalidate(driverStandingsProvider),
                         ),
                         data: (drivers) => _DriversContent(drivers: drivers),
                       ),
@@ -113,6 +130,7 @@ class _StandingsScreenState extends ConsumerState<StandingsScreen>
                         ),
                         error: (e, _) => _ErrorWidget(
                           message: 'Failed to load constructor standings',
+                          onRetry: () => ref.invalidate(constructorStandingsProvider),
                         ),
                         data: (constructors) =>
                             _ConstructorsContent(constructors: constructors),
@@ -121,6 +139,7 @@ class _StandingsScreenState extends ConsumerState<StandingsScreen>
             ),
           ),
         ],
+        ),
       ),
     );
   }
@@ -233,15 +252,14 @@ class _DriversContent extends StatelessWidget {
           child: _DriverPodium(top3: top3),
         ),
 
-        // Rest of standings
+        // Rest of standings with staggered animation
         if (rest.isNotEmpty) ...[
           const SizedBox(height: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              children: rest
-                  .map((d) => _DriverRow(driver: d))
-                  .toList(),
+            child: StaggeredList(
+              delayMs: 40,
+              children: rest.map((d) => _DriverRow(driver: d)).toList(),
             ),
           ),
         ],
@@ -298,97 +316,99 @@ class _DriverPodiumCard extends StatelessWidget {
     final teamTheme = TeamColors.forConstructorId(driver.constructorId);
     final accentColor = teamTheme.accentColor;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
-          border: Border.fromBorderSide(
-              BorderSide(color: AppColors.glassBorder)),
-        ),
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Container(width: 3, color: accentColor),
-              Expanded(
-                child: Stack(
-                  children: [
-                    Positioned(
-                      right: -8,
-                      top: -8,
-                      child: Text(
-                        driver.position.toString(),
-                        style: AppTextStyles.rankXL.copyWith(
-                          fontSize: isFirst ? 80 : 60,
-                          color: AppColors.surfaceHigh,
+    return GestureDetector(
+      onTap: () => context.push('/driver/${driver.driverId}', extra: {
+        'driverNumber': driver.permanentNumber,
+        'driverName': driver.fullName,
+        'constructorId': driver.constructorId,
+      }),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            border: Border.fromBorderSide(
+                BorderSide(color: AppColors.glassBorder)),
+          ),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(width: 3, color: accentColor),
+                Expanded(
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        right: -8,
+                        top: -8,
+                        child: Text(
+                          driver.position.toString(),
+                          style: AppTextStyles.rankXL.copyWith(
+                            fontSize: isFirst ? 80 : 60,
+                            color: AppColors.surfaceHigh,
+                          ),
                         ),
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              _PositionBadge(
-                                  position: driver.position,
-                                  accentColor: accentColor),
-                              if (driver.position == 2) ...[
-                                const SizedBox(width: 8),
-                                _Badge(
-                                    label: 'PURPLE SECTOR',
-                                    color: const Color(0xFF9B59B6)),
-                              ] else if (driver.position == 3) ...[
-                                const SizedBox(width: 8),
-                                _Badge(
-                                    label: '+1 POS',
-                                    color: AppColors.primaryContainer),
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                _PositionBadge(
+                                    position: driver.position,
+                                    accentColor: accentColor),
+                                if (driver.wins > 0) ...[
+                                  const SizedBox(width: 8),
+                                  _Badge(
+                                      label: '${driver.wins} WIN${driver.wins > 1 ? 'S' : ''}',
+                                      color: const Color(0xFFFFD700)),
+                                ],
                               ],
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            driver.familyName.toUpperCase(),
-                            style: AppTextStyles.headlineLarge.copyWith(
-                              fontSize: isFirst ? 26 : 18,
                             ),
-                          ),
-                          Text(
-                            driver.givenName,
-                            style: AppTextStyles.bodySmall,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            driver.constructorName,
-                            style: AppTextStyles.bodySmall
-                                .copyWith(color: accentColor),
-                          ),
-                          const SizedBox(height: 12),
-                          if (isFirst) ...[
+                            const SizedBox(height: 8),
                             Text(
-                              'CHAMPIONSHIP POINTS',
-                              style:
-                                  AppTextStyles.labelSmall.copyWith(fontSize: 8),
+                              driver.familyName.toUpperCase(),
+                              style: AppTextStyles.headlineLarge.copyWith(
+                                fontSize: isFirst ? 26 : 18,
+                              ),
                             ),
-                            const SizedBox(height: 2),
+                            Text(
+                              driver.givenName,
+                              style: AppTextStyles.bodySmall,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              driver.constructorName,
+                              style: AppTextStyles.bodySmall
+                                  .copyWith(color: accentColor),
+                            ),
+                            const SizedBox(height: 12),
+                            if (isFirst) ...[
+                              Text(
+                                'CHAMPIONSHIP POINTS',
+                                style:
+                                    AppTextStyles.labelSmall.copyWith(fontSize: 8),
+                              ),
+                              const SizedBox(height: 2),
+                            ],
+                            Text(
+                              driver.points
+                                  .toStringAsFixed(driver.points % 1 == 0 ? 0 : 1),
+                              style: AppTextStyles.rankXL.copyWith(
+                                fontSize: isFirst ? 48 : 32,
+                                color: accentColor,
+                              ),
+                            ),
                           ],
-                          Text(
-                            driver.points
-                                .toStringAsFixed(driver.points % 1 == 0 ? 0 : 1),
-                            style: AppTextStyles.rankXL.copyWith(
-                              fontSize: isFirst ? 48 : 32,
-                              color: accentColor,
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -408,9 +428,9 @@ class _PositionBadge extends StatelessWidget {
       width: 28,
       height: 28,
       decoration: BoxDecoration(
-        color: accentColor.withOpacity(0.15),
+        color: accentColor.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: accentColor.withOpacity(0.4), width: 1),
+        border: Border.all(color: accentColor.withValues(alpha: 0.4), width: 1),
       ),
       child: Center(
         child: Text(
@@ -436,7 +456,7 @@ class _Badge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
@@ -461,68 +481,98 @@ class _DriverRow extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: AppColors.surface,
-            border: Border.fromBorderSide(
-                BorderSide(color: AppColors.glassBorder)),
-          ),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(width: 3, color: teamTheme.accentColor),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 12),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 28,
-                          child: Text(
-                            driver.position.toString(),
-                            style: AppTextStyles.rankLarge.copyWith(
-                              fontSize: 18,
-                              color: AppColors.tertiaryContainer,
+      child: GestureDetector(
+        onTap: () => context.push('/driver/${driver.driverId}', extra: {
+          'driverNumber': driver.permanentNumber,
+          'driverName': driver.fullName,
+          'constructorId': driver.constructorId,
+        }),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: AppColors.surface,
+              border: Border.fromBorderSide(
+                  BorderSide(color: AppColors.glassBorder)),
+            ),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(width: 3, color: teamTheme.accentColor),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 28,
+                            child: Text(
+                              driver.position.toString(),
+                              style: AppTextStyles.rankLarge.copyWith(
+                                fontSize: 18,
+                                color: AppColors.tertiaryContainer,
+                              ),
                             ),
                           ),
-                        ),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                driver.fullName,
-                                style: AppTextStyles.headlineSmall
-                                    .copyWith(fontSize: 13),
-                              ),
-                              Text(
-                                driver.constructorName,
-                                style: AppTextStyles.bodySmall,
-                              ),
-                            ],
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  driver.fullName,
+                                  style: AppTextStyles.headlineSmall
+                                      .copyWith(fontSize: 13),
+                                ),
+                                Text(
+                                  driver.constructorName,
+                                  style: AppTextStyles.bodySmall,
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        Text(
-                          driver.points.toStringAsFixed(
-                              driver.points % 1 == 0 ? 0 : 1),
-                          style: AppTextStyles.rankLarge.copyWith(
-                            fontSize: 20,
-                            color: AppColors.onSurface,
+                          if (driver.wins > 0) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              margin: const EdgeInsets.only(right: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFD700).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                '${driver.wins}W',
+                                style: AppTextStyles.labelSmall.copyWith(
+                                  color: const Color(0xFFFFD700),
+                                  fontSize: 9,
+                                ),
+                              ),
+                            ),
+                          ],
+                          Text(
+                            driver.points.toStringAsFixed(
+                                driver.points % 1 == 0 ? 0 : 1),
+                            style: AppTextStyles.rankLarge.copyWith(
+                              fontSize: 20,
+                              color: AppColors.onSurface,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 4),
-                        Text('PTS',
-                            style: AppTextStyles.labelSmall
-                                .copyWith(fontSize: 8)),
-                      ],
+                          const SizedBox(width: 4),
+                          Text('PTS',
+                              style: AppTextStyles.labelSmall
+                                  .copyWith(fontSize: 8)),
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.chevron_right,
+                            color: AppColors.tertiaryContainer,
+                            size: 18,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -563,10 +613,9 @@ class _ConstructorsContent extends StatelessWidget {
           const SizedBox(height: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              children: rest
-                  .map((c) => _ConstructorRow(constructor: c))
-                  .toList(),
+            child: StaggeredList(
+              delayMs: 40,
+              children: rest.map((c) => _ConstructorRow(constructor: c)).toList(),
             ),
           ),
         ],
@@ -653,9 +702,19 @@ class _ConstructorPodiumCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _PositionBadge(
-                              position: constructor.position,
-                              accentColor: accentColor),
+                          Row(
+                            children: [
+                              _PositionBadge(
+                                  position: constructor.position,
+                                  accentColor: accentColor),
+                              if (constructor.wins > 0) ...[
+                                const SizedBox(width: 8),
+                                _Badge(
+                                    label: '${constructor.wins} WIN${constructor.wins > 1 ? 'S' : ''}',
+                                    color: const Color(0xFFFFD700)),
+                              ],
+                            ],
+                          ),
                           const SizedBox(height: 8),
                           Text(
                             constructor.name.toUpperCase(),
@@ -768,20 +827,41 @@ class _ConstructorRow extends StatelessWidget {
 }
 
 class _ErrorWidget extends StatelessWidget {
-  const _ErrorWidget({required this.message});
+  const _ErrorWidget({required this.message, required this.onRetry});
 
   final String message;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(40),
       child: Center(
-        child: Text(
-          message,
-          style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.tertiaryContainer,
-          ),
+        child: Column(
+          children: [
+            const Icon(
+              Icons.error_outline,
+              color: AppColors.tertiaryContainer,
+              size: 48,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.tertiaryContainer,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            TextButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh, size: 18),
+              label: const Text('Retry'),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primaryContainer,
+              ),
+            ),
+          ],
         ),
       ),
     );

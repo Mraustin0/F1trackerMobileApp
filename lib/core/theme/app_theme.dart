@@ -69,8 +69,8 @@ class AppTheme {
 
       // Navigation bar (bottom)
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: AppColors.background.withOpacity(0.9),
-        indicatorColor: team.accentColor.withOpacity(0.15),
+        backgroundColor: AppColors.background.withValues(alpha: 0.9),
+        indicatorColor: team.accentColor.withValues(alpha: 0.15),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return IconThemeData(color: team.accentColor, size: 24);

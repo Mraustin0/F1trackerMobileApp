@@ -33,6 +33,7 @@ dependencies:
   timezone: ^0.9.4
 
   # Local offline cache
+  hive: ^2.2.3
   hive_flutter: ^1.1.0
 
   # Fonts (Space Grotesk + Inter)

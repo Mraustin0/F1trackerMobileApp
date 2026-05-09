@@ -44,15 +44,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/profile',
-                builder: (context, state) => const ProfileScreen(),
-              ),
-            ],
-          ),
         ],
+      ),
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const ProfileScreen(),
       ),
       GoRoute(
         path: '/race/:circuitId',

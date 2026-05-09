@@ -8,11 +8,13 @@ class SectionHeader extends StatelessWidget {
     required this.label,
     this.onViewAll,
     this.padding,
+    this.trailing,
   });
 
   final String label;
   final VoidCallback? onViewAll;
   final EdgeInsetsGeometry? padding;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -40,6 +42,7 @@ class SectionHeader extends StatelessWidget {
               ),
             ),
           ),
+          if (trailing != null) trailing!,
           if (onViewAll != null)
             GestureDetector(
               onTap: onViewAll,

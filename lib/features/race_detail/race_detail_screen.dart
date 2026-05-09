@@ -95,22 +95,54 @@ class RaceDetailScreen extends ConsumerWidget {
     final season = ref.watch(currentSeasonProvider);
     final scheduleAsync = ref.watch(scheduleProvider(season));
 
-    RaceModel? resolvedRace = race;
-    if (resolvedRace == null) {
-      scheduleAsync.whenData((races) {
-        try {
-          resolvedRace = races.firstWhere((r) => r.circuitId == circuitId);
-        } catch (_) {}
-      });
+    // If race was passed directly, use it
+    if (race != null) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: _RaceDetailBody(race: race!, circuitId: circuitId),
+      );
     }
 
+    // Otherwise, find it from the schedule
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: resolvedRace == null
-          ? const Center(
-              child:
-                  CircularProgressIndicator(color: AppColors.primaryContainer))
-          : _RaceDetailBody(race: resolvedRace!, circuitId: circuitId),
+      body: scheduleAsync.when(
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: AppColors.primaryContainer),
+        ),
+        error: (e, _) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, color: AppColors.tertiaryContainer, size: 48),
+              const SizedBox(height: 16),
+              Text('Failed to load race', style: AppTextStyles.bodyMedium),
+              const SizedBox(height: 16),
+              TextButton.icon(
+                onPressed: () => ref.invalidate(scheduleProvider(season)),
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+        data: (races) {
+          final foundRace = races.where((r) => r.circuitId == circuitId).firstOrNull;
+          if (foundRace == null) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.search_off, color: AppColors.tertiaryContainer, size: 48),
+                  const SizedBox(height: 16),
+                  Text('Race not found', style: AppTextStyles.bodyMedium),
+                ],
+              ),
+            );
+          }
+          return _RaceDetailBody(race: foundRace, circuitId: circuitId);
+        },
+      ),
     );
   }
 }
@@ -174,17 +206,28 @@ class _RaceDetailBody extends ConsumerWidget {
     final circuitInfo = kCircuitData[circuitId.toLowerCase()];
     final lapRecord = kLapRecords[circuitId.toLowerCase()];
     final sessions = _buildSessions();
+    final resultsKey = '${race.season}:${race.round}';
 
     // Fetch race results if completed
     AsyncValue<List<RaceResultModel>>? resultsAsync;
     if (race.isCompleted) {
-      resultsAsync = ref.watch(
-          raceResultsProvider('${race.season}:${race.round}'));
+      resultsAsync = ref.watch(raceResultsProvider(resultsKey));
     }
 
-    return CustomScrollView(
-      physics: const BouncingScrollPhysics(),
-      slivers: [
+    return RefreshIndicator(
+      color: teamTheme.accentColor,
+      backgroundColor: AppColors.surface,
+      onRefresh: () async {
+        if (race.isCompleted) {
+          ref.invalidate(raceResultsProvider(resultsKey));
+          await ref.read(raceResultsProvider(resultsKey).future);
+        }
+      },
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        slivers: [
         // ---- Header with real circuit photograph ----
         SliverAppBar(
           pinned: true,
@@ -303,7 +346,12 @@ class _RaceDetailBody extends ConsumerWidget {
                         color: AppColors.primaryContainer, strokeWidth: 2),
                   ),
                 ),
-                error: (_, __) => const SizedBox.shrink(),
+                error: (e, _) => Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+                  child: _ResultsErrorCard(
+                    onRetry: () => ref.invalidate(raceResultsProvider(resultsKey)),
+                  ),
+                ),
                 data: (results) {
                   if (results.isEmpty) return const SizedBox.shrink();
                   return _RaceResultsSection(
@@ -449,6 +497,7 @@ class _RaceDetailBody extends ConsumerWidget {
           ]),
         ),
       ],
+      ),
     );
   }
 }
@@ -468,14 +517,22 @@ class _RaceResultsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final podium = results.take(3).toList();
-    final rest = results.length > 3 ? results.sublist(3, results.length.clamp(0, 10)) : <RaceResultModel>[];
+    // Show all remaining drivers (P4-P20), not just P4-P10
+    final rest = results.length > 3 ? results.sublist(3) : <RaceResultModel>[];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionHeader(
+        SectionHeader(
           label: 'Race Results',
-          padding: EdgeInsets.fromLTRB(20, 24, 20, 12),
+          trailing: Text(
+            '${results.length} DRIVERS',
+            style: AppTextStyles.labelSmall.copyWith(
+              color: AppColors.tertiaryContainer,
+              fontSize: 9,
+            ),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
         ),
 
         // Podium cards
@@ -501,7 +558,7 @@ class _RaceResultsSection extends StatelessWidget {
           ),
         ),
 
-        // Rest of results (P4-P10)
+        // Rest of results (P4+)
         if (rest.isNotEmpty) ...[
           const SizedBox(height: 12),
           Padding(
@@ -517,6 +574,52 @@ class _RaceResultsSection extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+// Error card for failed results loading
+class _ResultsErrorCard extends StatelessWidget {
+  const _ResultsErrorCard({required this.onRetry});
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.glassBorder),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.error_outline,
+            color: AppColors.tertiaryContainer,
+            size: 24,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Failed to load race results',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.tertiaryContainer,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: onRetry,
+            child: Text(
+              'Retry',
+              style: AppTextStyles.labelBold.copyWith(
+                color: AppColors.primaryContainer,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

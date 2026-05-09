@@ -24,7 +24,6 @@ class _F1NavBarState extends State<F1NavBar> {
     _NavItem(icon: Icons.home_rounded, label: 'HOME'),
     _NavItem(icon: Icons.calendar_month_rounded, label: 'CALENDAR'),
     _NavItem(icon: Icons.leaderboard_rounded, label: 'STANDINGS'),
-    _NavItem(icon: Icons.favorite_rounded, label: 'DRIVERS'),
   ];
 
   @override
@@ -39,7 +38,7 @@ class _F1NavBarState extends State<F1NavBar> {
         child: Container(
           height: 72 + MediaQuery.of(context).padding.bottom,
           decoration: BoxDecoration(
-            color: AppColors.background.withOpacity(0.92),
+            color: AppColors.background.withValues(alpha: 0.92),
             border: const Border(
               top: BorderSide(color: Color(0xFF2A2A35), width: 1),
             ),

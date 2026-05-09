@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/team_colors.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
-import '../../core/theme/team_theme_extension.dart';
 import '../../data/models/driver_detail_model.dart';
 import '../../providers/driver_detail_provider.dart';
 import '../../shared/widgets/glass_card.dart';
@@ -161,7 +160,7 @@ class _DriverHeroBanner extends StatelessWidget {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            accent.withOpacity(0.3),
+            accent.withValues(alpha: 0.3),
             AppColors.background,
           ],
         ),
@@ -178,7 +177,7 @@ class _DriverHeroBanner extends StatelessWidget {
               style: TextStyle(
                 fontSize: 200,
                 fontWeight: FontWeight.w900,
-                color: accent.withOpacity(0.08),
+                color: accent.withValues(alpha: 0.08),
                 height: 1,
               ),
             ),
@@ -208,7 +207,7 @@ class _DriverHeroBanner extends StatelessWidget {
                   end: Alignment.bottomCenter,
                   colors: [
                     Colors.transparent,
-                    AppColors.background.withOpacity(0.9),
+                    AppColors.background.withValues(alpha: 0.9),
                     AppColors.background,
                   ],
                 ),
@@ -257,11 +256,6 @@ class _DriverInfoBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final teamTheme = TeamColors.forConstructorId(
-        detail.seasonStandings.isNotEmpty
-            ? detail.seasonStandings.first.constructorId
-            : '');
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
@@ -508,11 +502,11 @@ class _ChampionshipHistory extends StatelessWidget {
                             horizontal: 12, vertical: 10),
                         decoration: BoxDecoration(
                           color: isChampion
-                              ? const Color(0xFFFFD700).withOpacity(0.06)
+                              ? const Color(0xFFFFD700).withValues(alpha: 0.06)
                               : AppColors.surface,
                           border: Border.all(
                             color: isChampion
-                                ? const Color(0xFFFFD700).withOpacity(0.2)
+                                ? const Color(0xFFFFD700).withValues(alpha: 0.2)
                                 : AppColors.glassBorder,
                             width: 1,
                           ),

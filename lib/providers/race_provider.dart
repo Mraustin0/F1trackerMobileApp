@@ -43,3 +43,17 @@ final raceResultsProvider = FutureProvider.family<List<RaceResultModel>, String>
   final jolpica = ref.watch(jolpicaDatasourceProvider);
   return jolpica.fetchRaceResults(season, round);
 });
+
+/// Get list of completed races (past races with results)
+final pastRacesProvider = Provider<List<RaceModel>>((ref) {
+  final season = ref.watch(currentSeasonProvider);
+  final repo = ref.watch(raceRepositoryProvider);
+  final cached = repo.getCachedSchedule(season);
+  if (cached.isEmpty) return [];
+
+  final now = DateTime.now().toUtc();
+  return cached
+      .where((r) => r.raceDate.isBefore(now))
+      .toList()
+    ..sort((a, b) => b.raceDate.compareTo(a.raceDate)); // Most recent first
+});
